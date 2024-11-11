@@ -101,7 +101,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
     <script type="text/javascript">
-        // The link to your model provided by Teachable Machine export panel
         const URL = "https://teachablemachine.withgoogle.com/models/MqKB-2giv/";
 
         let model, webcam, labelContainer, maxPredictions;
@@ -113,32 +112,52 @@
 
         // Load the image model and setup the webcam
         async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
+            try {
+                const modelURL = URL + "model.json";
+                const metadataURL = URL + "metadata.json";
 
-            // Load the model and metadata
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+                // Load the model and metadata
+                model = await tmImage.load(modelURL, metadataURL);
+                maxPredictions = model.getTotalClasses();
 
-            // Setup webcam with lower resolution
-            const flip = true; // whether to flip the webcam
-            webcam = new tmImage.Webcam(320, 240, flip); // Lowered resolution for better performance
-            await webcam.setup(); // request access to the webcam
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+                // Setup webcam using getUserMedia (fallback if webcam doesn't work)
+                const flip = true; // whether to flip the webcam
+                const video = document.createElement("video");
+                const constraints = {
+                    video: { width: 320, height: 240, facingMode: "user" },
+                };
 
-            // Append elements to the DOM
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < maxPredictions; i++) { // and class labels
-                labelContainer.appendChild(document.createElement("div"));
+                navigator.mediaDevices
+                    .getUserMedia(constraints)
+                    .then((stream) => {
+                        video.srcObject = stream;
+                        video.play();
+                        webcam = new tmImage.Webcam(320, 240, flip, video);
+                        video.onplaying = () => {
+                            webcam.play();
+                            window.requestAnimationFrame(loop);
+                            document.getElementById("webcam-container").appendChild(webcam.canvas);
+                        };
+                    })
+                    .catch((error) => {
+                        console.error("Error accessing webcam:", error);
+                    });
+
+                labelContainer = document.getElementById("label-container");
+                for (let i = 0; i < maxPredictions; i++) {
+                    labelContainer.appendChild(document.createElement("div"));
+                }
+            } catch (error) {
+                console.error("Error during webcam initialization:", error);
             }
         }
 
         async function loop() {
-            webcam.update(); // Update the webcam frame
-            await predict();
-            window.requestAnimationFrame(loop); // Keep the loop running
+            if (webcam) {
+                webcam.update(); // Update the webcam frame
+                await predict();
+                window.requestAnimationFrame(loop); // Keep the loop running
+            }
         }
 
         // Run the webcam image through the image model
