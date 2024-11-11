@@ -91,9 +91,6 @@
 
         let model, webcam, labelContainer, maxPredictions;
 
-        // Confidence threshold for predictions
-        const minConfidence = 0.75;
-
         // Load the image model and setup the webcam
         async function init() {
             const modelURL = URL + "model.json";
@@ -103,7 +100,7 @@
             model = await tmImage.load(modelURL, metadataURL);
             maxPredictions = model.getTotalClasses();
 
-            // Setup webcam
+            // Convenience function to setup a webcam
             const flip = true; // whether to flip the webcam
             webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
             await webcam.setup(); // request access to the webcam
@@ -128,23 +125,10 @@
         async function predict() {
             const prediction = await model.predict(webcam.canvas);
             for (let i = 0; i < maxPredictions; i++) {
-                const classPrediction = handlePrediction(prediction[i]);
+                const classPrediction =
+                    prediction[i].className + ": " + prediction[i].probability.toFixed(2);
                 labelContainer.childNodes[i].innerHTML = classPrediction;
             }
-        }
-
-        // Handle the prediction with confidence thresholding
-        function handlePrediction(prediction) {
-            if (prediction.probability < minConfidence) {
-                return "Uncertain: " + prediction.className;
-            }
-
-            // Post-process classification to adjust if necessary
-            if (prediction.className === "hazardous waste" && prediction.probability < 0.6) {
-                return "Check Waste";
-            }
-
-            return prediction.className + ": " + prediction.probability.toFixed(2);
         }
     </script>
 </body>
