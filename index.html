@@ -3,64 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teachable Machine Video Classifier</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ml5@0.6.0/dist/ml5.min.js"></script>
+    <title>Teachable Machine Image Model</title>
 </head>
 <body>
-    <h2>Teachable Machine Video Classifier</h2>
-    <p>Classifying the video with Teachable Machine model.</p>
+    <div>Teachable Machine Image Model</div>
+    <button type="button" onclick="init()">Start</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
 
-    <script>
-        let video;
-        let label = "waiting...";
-        let classifier;
-        const modelURL = 'https://teachablemachine.withgoogle.com/models/bXy2kDNi/';
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    <script type="text/javascript">
+        // The link to your model provided by Teachable Machine export panel
+        const URL = "https://teachablemachine.withgoogle.com/models/MqKB-2giv/";
 
-        function preload() {
-            classifier = ml5.imageClassifier(modelURL + 'model.json');
-        }
+        let model, webcam, labelContainer, maxPredictions;
 
-        function setup() {
-            createCanvas(640, 520);
-            video = createCapture(VIDEO);
-            video.hide();
-            classifyVideo();
-        }
+        // Load the image model and setup the webcam
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
 
-        function classifyVideo() {
-            classifier.classify(video, gotResults);
-        }
+            // Load the model and metadata
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
 
-        function draw() {
-            background(0);
-            image(video, 0, 0);
+            // Convenience function to setup a webcam
+            const flip = true; // whether to flip the webcam
+            webcam = new tmImage.Webcam(200, 200, flip); // width, height, flip
+            await webcam.setup(); // request access to the webcam
+            await webcam.play();
+            window.requestAnimationFrame(loop);
 
-            textSize(32);
-            textAlign(CENTER, CENTER);
-            fill(255);
-            text(label, width / 2, height - 16);
-
-            let emoji = "🚂";
-            if (label == "Rainbow") {
-                emoji = "🌈";
-            } else if (label == "Unicorn") {
-                emoji = "🦄";
-            } else if (label == "Ukulele") {
-                emoji = "🎸";
+            // Append elements to the DOM
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            labelContainer = document.getElementById("label-container");
+            for (let i = 0; i < maxPredictions; i++) { // and class labels
+                labelContainer.appendChild(document.createElement("div"));
             }
-
-            textSize(256);
-            text(emoji, width / 2, height / 2);
         }
 
-        function gotResults(error, results) {
-            if (error) {
-                console.error(error);
-                return;
+        async function loop() {
+            webcam.update(); // Update the webcam frame
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        // Run the webcam image through the image model
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            for (let i = 0; i < maxPredictions; i++) {
+                const classPrediction =
+                    prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+                labelContainer.childNodes[i].innerHTML = classPrediction;
             }
-            label = results[0].label;
-            classifyVideo();
         }
     </script>
 </body>
