@@ -1,79 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teachable Machine Image Model - p5.js and ml5.js</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teachable Machine Video Classifier</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml5@0.6.0/dist/ml5.min.js"></script>
 </head>
 <body>
-  <div>Teachable Machine Image Model - p5.js and ml5.js</div>
+    <h2>Teachable Machine Video Classifier</h2>
+    <p>Classifying the video with Teachable Machine model.</p>
 
-  <!-- Include the necessary libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/addons/p5.dom.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ml5@latest/dist/ml5.min.js"></script>
+    <script>
+        // The video
+        let video;
+        // For displaying the label
+        let label = "waiting...";
+        // The classifier
+        let classifier;
+        let modelURL = 'https://teachablemachine.withgoogle.com/models/bXy2kDNi/';
 
-  <script type="text/javascript">
-    // Classifier Variable
-    let classifier;
-    // Model URL
-    let imageModelURL = 'https://teachablemachine.withgoogle.com/models/MqKB-2giv/';
+        // STEP 1: Load the model!
+        function preload() {
+            classifier = ml5.imageClassifier(modelURL + 'model.json');
+        }
 
-    // Video
-    let video;
-    let flippedVideo;
-    // To store the classification
-    let label = "";
+        function setup() {
+            createCanvas(640, 520);
+            // Create the video
+            video = createCapture(VIDEO);
+            video.hide();
+            // STEP 2: Start classifying
+            classifyVideo();
+        }
 
-    // Load the model first
-    function preload() {
-      classifier = ml5.imageClassifier(imageModelURL + 'model.json');
-    }
+        // STEP 2: classify the video!
+        function classifyVideo() {
+            classifier.classify(video, gotResults);
+        }
 
-    function setup() {
-      createCanvas(320, 260);
-      // Create the video
-      video = createCapture(VIDEO);
-      video.size(320, 240);
-      video.hide();
+        function draw() {
+            background(0);
 
-      flippedVideo = ml5.flipImage(video);
-      // Start classifying
-      classifyVideo();
-    }
+            // Draw the video
+            image(video, 0, 0);
 
-    function draw() {
-      background(0);
-      // Draw the video
-      image(flippedVideo, 0, 0);
+            // STEP 4: Draw the label
+            textSize(32);
+            textAlign(CENTER, CENTER);
+            fill(255);
+            text(label, width / 2, height - 16);
 
-      // Draw the label
-      fill(255);
-      textSize(16);
-      textAlign(CENTER);
-      text(label, width / 2, height - 4);
-    }
+            // Pick an emoji, the "default" is train
+            let emoji = "🚂";
+            if (label == "Rainbow") {
+                emoji = "🌈";
+            } else if (label == "Unicorn") {
+                emoji = "🦄";
+            } else if (label == "Ukulele") {
+                emoji = "🎸";
+            }
 
-    // Get a prediction for the current video frame
-    function classifyVideo() {
-      flippedVideo = ml5.flipImage(video)
-      classifier.classify(flippedVideo, gotResult);
-      flippedVideo.remove();
-    }
+            // Draw the emoji
+            textSize(256);
+            text(emoji, width / 2, height / 2);
+        }
 
-    // When we get a result
-    function gotResult(error, results) {
-      // If there is an error
-      if (error) {
-        console.error(error);
-        return;
-      }
-      // The results are in an array ordered by confidence.
-      // console.log(results[0]);
-      label = results[0].label;
-      // Classify again!
-      classifyVideo();
-    }
-  </script>
+        // STEP 3: Get the classification!
+        function gotResults(error, results) {
+            // Something went wrong!
+            if (error) {
+                console.error(error);
+                return;
+            }
+            // Store the label and classify again!
+            label = results[0].label;
+            classifyVideo();
+        }
+    </script>
 </body>
 </html>
